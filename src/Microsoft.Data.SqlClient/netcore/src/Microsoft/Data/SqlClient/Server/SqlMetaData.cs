@@ -745,7 +745,7 @@ namespace Microsoft.Data.SqlClient.Server
             if (null == name)
                 throw ADP.ArgumentNull(nameof(name));
 
-            if (Microsoft.Data.SqlClient.Server.SmiMetaData.MaxNameLength < name.Length)
+            if (Server.SmiMetaData.MaxNameLength < name.Length)
                 throw SQL.NameTooLong(nameof(name));
         }
 

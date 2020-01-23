@@ -103,11 +103,15 @@ namespace Microsoft.Data.SqlClient
         /// <include file='..\..\..\..\..\..\..\doc\snippets\Microsoft.Data.SqlClient\SqlConnection.xml' path='docs/members[@name="SqlConnection"]/ColumnEncryptionTrustedMasterKeyPaths/*' />
         public static IDictionary<string, IList<string>> ColumnEncryptionTrustedMasterKeyPaths => _ColumnEncryptionTrustedMasterKeyPaths;
 
+        // Retry Policy providers added in configuration file
+        private readonly SqlRetryPolicyProviderManager _retryPolicyProviderManager = SqlRetryPolicyProviderManager.Instance;
+
         /// <include file='..\..\..\..\..\..\..\doc\snippets\Microsoft.Data.SqlClient\SqlConnection.xml' path='docs/members[@name="SqlConnection"]/ctorConnectionString/*' />
         public SqlConnection(string connectionString) : this()
         {
             ConnectionString = connectionString;    // setting connection string first so that ConnectionOption is available
             CacheConnectionStringProperties();
+            GetRetryPolicyFromProvider();
         }
 
         /// <include file='..\..\..\..\..\..\..\doc\snippets\Microsoft.Data.SqlClient\SqlConnection.xml' path='docs/members[@name="SqlConnection"]/ctorConnectionStringCredential/*' />
@@ -135,6 +139,7 @@ namespace Microsoft.Data.SqlClient
             //      credential == null:  we should not set "Credential" as this will do additional validation check and
             //      checking pool groups which is not necessary. All necessary operation is already done by calling "ConnectionString = connectionString"
             CacheConnectionStringProperties();
+            GetRetryPolicyFromProvider();
         }
 
         private SqlConnection(SqlConnection connection)
@@ -151,6 +156,7 @@ namespace Microsoft.Data.SqlClient
 
             _accessToken = connection._accessToken;
             CacheConnectionStringProperties();
+            GetRetryPolicyFromProvider();
         }
 
         /// <summary>
@@ -296,68 +302,25 @@ namespace Microsoft.Data.SqlClient
         private void CacheConnectionStringProperties()
         {
             SqlConnectionString connString = ConnectionOptions as SqlConnectionString;
+
             if (connString != null)
             {
                 _connectRetryCount = connString.ConnectRetryCount;
-
-                // Retry Logic
-                switch (connString.RetryStrategy)
-                {
-                    case "None":
-                    case "":
-                        _retryPolicy = null;
-                        break;
-
-                    case "FixedInterval":
-                        _retryPolicy = new SqlRetryPolicy<TransientErrorDetectionStrategy>(new FixedInterval(connString.RetryCount, TimeSpan.FromSeconds(connString.RetryInterval)));
-                        break;
-
-                    case "Incremental":
-                        _retryPolicy = new SqlRetryPolicy<TransientErrorDetectionStrategy>(new Incremental(connString.RetryCount, TimeSpan.FromSeconds(connString.RetryInterval), TimeSpan.FromSeconds(connString.RetryIncrement)));
-                        break;
-
-                    case "ExponentialBackoff":
-                        _retryPolicy = new SqlRetryPolicy<TransientErrorDetectionStrategy>(new ExponentialBackoff(connString.RetryCount, TimeSpan.FromSeconds(connString.RetryMinBackoff), TimeSpan.FromSeconds(connString.RetryMaxBackoff), TimeSpan.FromSeconds(connString.RetryDeltaBackoff)));
-                        break;
-                }
-
-                List<int> errorsToAdd  = new List<int>();
-                List<int> errorsToRemove = new List<int>();
-
-                if (_retryPolicy != null)
-                {
-                    if (connString.RetriableErrors != "")
-                    {
-                        foreach (string s in connString.RetriableErrors.Split(','))
-                        {
-                            int err;
-                            if (s.IndexOf('+') != -1)
-                            {
-                                if(int.TryParse(s.Replace("+",""), out err))
-                                    errorsToAdd.Add(err);
-                            } else if (s.IndexOf('-') != -1)
-                            {
-                                if(int.TryParse(s.Replace("-",""), out err))
-                                    errorsToRemove.Add(err);
-                            } else
-                            {
-                                if (int.TryParse(s, out err))
-                                    errorsToAdd.Add(err);
-                            }
-                        }
-                    }
-                    foreach(int err in errorsToAdd)
-                    {
-                        _retryPolicy.ErrorDetectionStrategy.RetriableErrors.Add(err);
-                    }
-                    foreach(int err in errorsToRemove)
-                    {
-                        _retryPolicy.ErrorDetectionStrategy.RetriableErrors.Remove(err);
-                    }
-                }
             }
         }
 
+        private void GetRetryPolicyFromProvider()
+        {
+            // Get provider from provider manager based on configuration
+            var retryPolicyProvider = _retryPolicyProviderManager.GetProvider(SqlRetryLogicMethod.ConnectionOpen);
+
+            // Get retry policy based on parameters
+            var retryPolicyParams = new SqlRetryPolicyParameters(
+            );
+
+            if (retryPolicyProvider!=null)
+                _retryPolicy = retryPolicyProvider.GetRetryPolicy(retryPolicyParams);
+        }
 
 
         //
@@ -1349,7 +1312,7 @@ namespace Microsoft.Data.SqlClient
                 try
                 {
                     // This works but synchronously
-                    completed = (_retryPolicy != null) ? _retryPolicy.ExecuteAction<bool>(() => { return TryOpen(null); }) : TryOpen(completion);
+                    completed = (_retryPolicy != null) ? _retryPolicy.ExecuteAsync(() => {return Task.FromResult<bool>(TryOpen(null)); }).Result : TryOpen(completion);
                 }
                 catch (Exception e)
                 {

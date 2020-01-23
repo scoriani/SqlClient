@@ -18,7 +18,7 @@ namespace Microsoft.Data.SqlClient
 
         internal PoolBlockingPeriod PoolBlockingPeriod { get { return _poolBlockingPeriod; } }
 
-        internal Microsoft.Data.SqlClient.PoolBlockingPeriod ConvertValueToPoolBlockingPeriod()
+        internal PoolBlockingPeriod ConvertValueToPoolBlockingPeriod()
         {
             string value;
             if (!TryGetParsetableValue(KEY.PoolBlockingPeriod, out value))
