@@ -151,6 +151,9 @@ namespace Microsoft.Data.SqlClient.ManualTesting.Tests
         [ConditionalFact(typeof(DataTestUtility), nameof(DataTestUtility.AreConnStringsSetup), nameof(DataTestUtility.IsNotAzureServer))]
         public static void ExceptionTests()
         {
+            // Added to avoid random failures of Pool exhaustion
+            SqlConnection.ClearAllPools();
+
             SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder(DataTestUtility.TCPConnectionString);
 
             // tests improper server name thrown from constructor of tdsparser
@@ -222,6 +225,23 @@ namespace Microsoft.Data.SqlClient.ManualTesting.Tests
                     VerifyConnectionFailure<InvalidOperationException>(() => command.ExecuteReader(), execReaderFailedMessage);
                 }
             }
+        }
+
+        [CheckConnStrSetupFact]
+        public static void EnclavesConnectionExceptionTest()
+        {
+            string connectionStringWithAttestationProtocol = DataTestUtility.TCPConnectionString + ";Attestation Protocol = HGS;";
+            string connectionStringWithAttestionURL = DataTestUtility.TCPConnectionString + ";Enclave Attestation URL = https://dummyURL;";
+            string connectionStringWithEnclave = connectionStringWithAttestionURL + ";Attestation Protocol = HGS;";
+
+            InvalidOperationException e1 = Assert.Throws<InvalidOperationException>(() => new SqlConnection(connectionStringWithAttestionURL).Open());
+            Assert.Contains("You have specified the enclave attestation URL in the connection string", e1.Message);
+
+            InvalidOperationException e2 = Assert.Throws<InvalidOperationException>(() => new SqlConnection(connectionStringWithAttestationProtocol).Open());
+            Assert.Contains("You have specified the attestation protocol in the connection string", e2.Message);
+
+            InvalidOperationException e3 = Assert.Throws<InvalidOperationException>(() => new SqlConnection(connectionStringWithEnclave).Open());
+            Assert.Contains("You have specified the enclave attestation URL and attestation protocol in the connection string", e3.Message);
         }
 
         [CheckConnStrSetupFact]

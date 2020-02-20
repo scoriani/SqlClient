@@ -92,9 +92,11 @@ namespace Microsoft.Data.SqlClient
                 Debug.Assert(!m_started);
 
                 RuntimeHelpers.PrepareConstrainedRegions();
-                try {
+                try
+                {
                 }
-                finally {
+                finally
+                {
                     ++s_reliabilityCount;
                     m_started = true;
                 }
@@ -107,13 +109,16 @@ namespace Microsoft.Data.SqlClient
 #if DEBUG
                 // cannot assert m_started - ThreadAbortException can be raised before Start is called
 
-                if (m_started) {
+                if (m_started)
+                {
                     Debug.Assert(s_reliabilityCount > 0);
 
                     RuntimeHelpers.PrepareConstrainedRegions();
-                    try {
+                    try
+                    {
                     }
-                    finally {
+                    finally
+                    {
                         --s_reliabilityCount;
                         m_started = false;
                     }
@@ -1586,7 +1591,7 @@ namespace Microsoft.Data.SqlClient
         {
 #if DEBUG
             // There is an exception here for MARS as its possible that another thread has closed the connection just as we see an error
-            Debug.Assert(SniContext.Undefined!=stateObj.DebugOnlyCopyOfSniContext || ((_fMARS) && ((_state == TdsParserState.Closed) || (_state == TdsParserState.Broken))), "SniContext must not be None");
+            Debug.Assert(SniContext.Undefined != stateObj.DebugOnlyCopyOfSniContext || ((_fMARS) && ((_state == TdsParserState.Closed) || (_state == TdsParserState.Broken))), "SniContext must not be None");
 #endif
             SNINativeMethodWrapper.SNI_Error sniError = new SNINativeMethodWrapper.SNI_Error();
             SNINativeMethodWrapper.SNIGetLastError(out sniError);
@@ -1774,7 +1779,8 @@ namespace Microsoft.Data.SqlClient
                 }
             }
 #if DEBUG
-            else {
+            else
+            {
                 Debug.Assert(!_fResetConnection ||
                              (_fResetConnection && stateObj._fResetConnectionSent && stateObj._fResetEventOwned),
                              "Unexpected state on else ResetConnection block in WritePacket");
@@ -2048,13 +2054,15 @@ namespace Microsoft.Data.SqlClient
 #if DEBUG
                 TdsParser.ReliabilitySection tdsReliabilitySection = new TdsParser.ReliabilitySection();
                 RuntimeHelpers.PrepareConstrainedRegions();
-                try {
+                try
+                {
                     tdsReliabilitySection.Start();
 #endif //DEBUG
-                return Run(runBehavior, cmdHandler, dataStream, bulkCopyHandler, stateObj);
+                    return Run(runBehavior, cmdHandler, dataStream, bulkCopyHandler, stateObj);
 #if DEBUG
                 }
-                finally {
+                finally
+                {
                     tdsReliabilitySection.Stop();
                 }
 #endif //DEBUG
@@ -2478,10 +2486,11 @@ namespace Microsoft.Data.SqlClient
                                             if (null != _currentTransaction)
                                             {
 #if DEBUG
-                                    // Check null for case where Begin and Rollback obtained in the same message.
-                                    if (SqlInternalTransaction.NullTransactionId != _currentTransaction.TransactionId) {
-                                        Debug.Assert(_currentTransaction.TransactionId != env[ii].newLongValue, "transaction id's are not equal!");
-                                    }
+                                                // Check null for case where Begin and Rollback obtained in the same message.
+                                                if (SqlInternalTransaction.NullTransactionId != _currentTransaction.TransactionId)
+                                                {
+                                                    Debug.Assert(_currentTransaction.TransactionId != env[ii].newLongValue, "transaction id's are not equal!");
+                                                }
 #endif
 
                                                 if (TdsEnums.ENV_COMMITTRAN == env[ii].type)
@@ -2747,9 +2756,11 @@ namespace Microsoft.Data.SqlClient
                 (!stateObj._pendingData && stateObj._attentionSent && !stateObj._attentionReceived));
 
 #if DEBUG
-            if ((stateObj._pendingData) && (!dataReady)) {
+            if ((stateObj._pendingData) && (!dataReady))
+            {
                 byte token;
-                if (!stateObj.TryPeekByte(out token)) {
+                if (!stateObj.TryPeekByte(out token))
+                {
                     return false;
                 }
                 Debug.Assert(IsValidTdsToken(token), $"DataReady is false, but next token is not valid: {token,-2:X2}");
@@ -3454,30 +3465,43 @@ namespace Microsoft.Data.SqlClient
                 throw SQL.TceNotSupported();
             }
 
-            // Check if enclave attestation url was specified and server does not support enclave computations and we aren't going to be routed to another server.
-            if (this.Connection.RoutingInfo == null
-                && (!string.IsNullOrWhiteSpace(_connHandler.ConnectionOptions.EnclaveAttestationUrl))
-                && (TceVersionSupported < TdsEnums.MIN_TCE_VERSION_WITH_ENCLAVE_SUPPORT))
+            // Check if server does not support Enclave Computations and we aren't going to be routed to another server.
+            if (Connection.RoutingInfo == null)
             {
-                throw SQL.EnclaveComputationsNotSupported();
-            }
+                SqlConnectionAttestationProtocol attestationProtocol = _connHandler.ConnectionOptions.AttestationProtocol;
 
-            // Check if enclave attestation url was specified and server does not return an enclave type and we aren't going to be routed to another server.
-            if (this.Connection.RoutingInfo == null
-                && (!string.IsNullOrWhiteSpace(_connHandler.ConnectionOptions.EnclaveAttestationUrl))
-                && string.IsNullOrWhiteSpace(EnclaveType))
-            {
-                throw SQL.EnclaveTypeNotReturned();
-            }
-
-            // Check if enclave attestation url was specified and the attestation protocol supports the enclave type.
-            SqlConnectionAttestationProtocol attestationProtocol = _connHandler.ConnectionOptions.AttestationProtocol;
-            if (this.Connection.RoutingInfo == null
-                && (!string.IsNullOrWhiteSpace(_connHandler.ConnectionOptions.EnclaveAttestationUrl))
-                && (!string.IsNullOrWhiteSpace(EnclaveType))
-                && (!IsValidAttestationProtocol(attestationProtocol, EnclaveType)))
-            {
-                throw SQL.AttestationProtocolNotSupportEnclaveType(ConvertAttestationProtocolToString(attestationProtocol), EnclaveType);
+                if (TceVersionSupported < TdsEnums.MIN_TCE_VERSION_WITH_ENCLAVE_SUPPORT)
+                {
+                    // Check if enclave attestation url was specified and server does not support enclave computations and we aren't going to be routed to another server.
+                    if (!string.IsNullOrWhiteSpace(_connHandler.ConnectionOptions.EnclaveAttestationUrl) && SqlConnectionAttestationProtocol.NotSpecified != attestationProtocol)
+                    {
+                        throw SQL.EnclaveComputationsNotSupported();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_connHandler.ConnectionOptions.EnclaveAttestationUrl))
+                    {
+                        throw SQL.AttestationURLNotSupported();
+                    }
+                    else if (SqlConnectionAttestationProtocol.NotSpecified != _connHandler.ConnectionOptions.AttestationProtocol)
+                    {
+                        throw SQL.AttestationProtocolNotSupported();
+                    }
+                }
+                // Check if enclave attestation url was specified and server does not return an enclave type and we aren't going to be routed to another server.
+                if (!string.IsNullOrWhiteSpace(_connHandler.ConnectionOptions.EnclaveAttestationUrl))
+                {
+                    if (string.IsNullOrWhiteSpace(EnclaveType))
+                    {
+                        throw SQL.EnclaveTypeNotReturned();
+                    }
+                    else
+                    {
+                        // Check if the attestation protocol is specified and supports the enclave type.
+                        if (SqlConnectionAttestationProtocol.NotSpecified != attestationProtocol && !IsValidAttestationProtocol(attestationProtocol, EnclaveType))
+                        {
+                            throw SQL.AttestationProtocolNotSupportEnclaveType(ConvertAttestationProtocolToString(attestationProtocol), EnclaveType);
+                        }
+                    }
+                }
             }
 
             return true;
@@ -3485,10 +3509,13 @@ namespace Microsoft.Data.SqlClient
 
         private bool IsValidAttestationProtocol(SqlConnectionAttestationProtocol attestationProtocol, string enclaveType)
         {
-            switch (enclaveType)
+            switch (enclaveType.ToUpper())
             {
                 case TdsEnums.ENCLAVE_TYPE_VBS:
                     if (attestationProtocol != SqlConnectionAttestationProtocol.AAS
+#if ENCLAVE_SIMULATOR
+                        && attestationProtocol != SqlConnectionAttestationProtocol.SIM
+#endif
                         && attestationProtocol != SqlConnectionAttestationProtocol.HGS)
                     {
                         return false;
@@ -3496,12 +3523,25 @@ namespace Microsoft.Data.SqlClient
                     break;
 
                 case TdsEnums.ENCLAVE_TYPE_SGX:
+#if ENCLAVE_SIMULATOR
+                    if (attestationProtocol != SqlConnectionAttestationProtocol.AAS
+                        && attestationProtocol != SqlConnectionAttestationProtocol.SIM)
+#else
                     if (attestationProtocol != SqlConnectionAttestationProtocol.AAS)
+#endif
                     {
                         return false;
                     }
                     break;
 
+#if ENCLAVE_SIMULATOR
+                case TdsEnums.ENCLAVE_TYPE_SIMULATOR:
+                    if (attestationProtocol != SqlConnectionAttestationProtocol.SIM)
+                    {
+                        return false;
+                    }
+                    break;
+#endif
                 default:
                     // if we reach here, the enclave type is not supported
                     throw SQL.EnclaveTypeNotSupported(enclaveType);
@@ -3519,6 +3559,11 @@ namespace Microsoft.Data.SqlClient
 
                 case SqlConnectionAttestationProtocol.HGS:
                     return "HGS";
+
+#if ENCLAVE_SIMULATOR
+                case SqlConnectionAttestationProtocol.SIM:
+                    return "SIM";
+#endif
 
                 default:
                     return "NotSpecified";
@@ -4730,7 +4775,8 @@ namespace Microsoft.Data.SqlClient
                 TdsParser.ReliabilitySection tdsReliabilitySection = new TdsParser.ReliabilitySection();
 
                 RuntimeHelpers.PrepareConstrainedRegions();
-                try {
+                try
+                {
                     tdsReliabilitySection.Start();
 #else
                 {
@@ -4802,7 +4848,8 @@ namespace Microsoft.Data.SqlClient
                     }
                 }
 #if DEBUG
-                finally {
+                finally
+                {
                     tdsReliabilitySection.Stop();
                 }
 #endif //DEBUG
@@ -9157,7 +9204,8 @@ namespace Microsoft.Data.SqlClient
                         dtcReader.GetBytes(0, 0, dtcAddr, 0, cb);
                     }
 #if DEBUG
-                    else {
+                    else
+                    {
                         Debug.Fail("unexpected length (> Int32.MaxValue) returned from dtcReader.GetBytes");
                         // if we hit this case we'll just return a null address so that the user
                         // will get a transcaction enlistment error in the upper layers
@@ -10199,9 +10247,10 @@ namespace Microsoft.Data.SqlClient
                                 }
                             }
 #if DEBUG
-                          else {
-                              Debug.Assert(writeParamTask == null, "Should not have a task when executing sync");
-                          }
+                            else
+                            {
+                                Debug.Assert(writeParamTask == null, "Should not have a task when executing sync");
+                            }
 #endif
                         } // parameter for loop
 
@@ -10314,20 +10363,22 @@ namespace Microsoft.Data.SqlClient
             try
             {
 #if DEBUG
-              TdsParser.ReliabilitySection tdsReliabilitySection = new TdsParser.ReliabilitySection();
+                TdsParser.ReliabilitySection tdsReliabilitySection = new TdsParser.ReliabilitySection();
 
-              RuntimeHelpers.PrepareConstrainedRegions();
-              try {
-                  tdsReliabilitySection.Start();
+                RuntimeHelpers.PrepareConstrainedRegions();
+                try
+                {
+                    tdsReliabilitySection.Start();
 #else
                 {
 #endif //DEBUG
                     FailureCleanup(stateObj, exc);
                 }
 #if DEBUG
-              finally {
-                  tdsReliabilitySection.Stop();
-              }
+                finally
+                {
+                    tdsReliabilitySection.Stop();
+                }
 #endif //DEBUG
             }
             catch (System.OutOfMemoryException)
@@ -10362,7 +10413,8 @@ namespace Microsoft.Data.SqlClient
                         TdsParser.ReliabilitySection tdsReliabilitySection = new TdsParser.ReliabilitySection();
 
                         RuntimeHelpers.PrepareConstrainedRegions();
-                        try {
+                        try
+                        {
                             tdsReliabilitySection.Start();
 #else
                         {
@@ -10370,7 +10422,8 @@ namespace Microsoft.Data.SqlClient
                             FailureCleanup(stateObj, tsk.Exception);
                         }
 #if DEBUG
-                        finally {
+                        finally
+                        {
                             tdsReliabilitySection.Stop();
                         }
 #endif //DEBUG
@@ -11408,7 +11461,8 @@ namespace Microsoft.Data.SqlClient
 
 #if DEBUG
                 //In DEBUG mode, when SetAlwaysTaskOnWrite is true, we create a task. Allows us to verify async execution paths.
-                if (_asyncWrite && internalWriteTask == null && SqlBulkCopy.SetAlwaysTaskOnWrite == true) {
+                if (_asyncWrite && internalWriteTask == null && SqlBulkCopy.SetAlwaysTaskOnWrite == true)
+                {
                     internalWriteTask = Task.FromResult<object>(null);
                 }
 #endif
@@ -12055,7 +12109,8 @@ namespace Microsoft.Data.SqlClient
                     TdsParser.ReliabilitySection tdsReliabilitySection = new TdsParser.ReliabilitySection();
 
                     RuntimeHelpers.PrepareConstrainedRegions();
-                    try {
+                    try
+                    {
                         tdsReliabilitySection.Start();
 #else
                     {
@@ -12076,7 +12131,8 @@ namespace Microsoft.Data.SqlClient
                         }
                     }
 #if DEBUG
-                    finally {
+                    finally
+                    {
                         tdsReliabilitySection.Stop();
                     }
 #endif //DEBUG

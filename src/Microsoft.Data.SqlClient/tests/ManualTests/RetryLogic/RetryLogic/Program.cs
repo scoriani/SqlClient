@@ -2,7 +2,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.Reliability;
 using System.Data;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace RetryLogicCore

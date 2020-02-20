@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="Latest" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <ProjectGuid>{407890AC-9876-4FEF-A6F1-F36A876BAADE}</ProjectGuid>
@@ -84,7 +84,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Microsoft.Data.SqlClientKey.snk" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Microsoft\Data\Interop\SNINativeMethodWrapper.cs" />
@@ -309,6 +308,9 @@
     <Compile Include="Microsoft\Data\ProviderBase\FieldNameLookup.cs" />
     <Compile Include="Microsoft\Data\OperationAbortedException.cs" />
   </ItemGroup>
+  <ItemGroup Condition="'$(BuildSimulator)' == 'true'">
+    <Compile Include="Microsoft\Data\SqlClient\SimulatorEnclaveProvider.cs" />
+  </ItemGroup>
   <!-- Resources  -->
   <ItemGroup>
     <Compile Include="Resources\$(ResxFileName).Designer.cs">
@@ -340,20 +342,29 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.Algorithms">
+      <Version>$(SystemSecurityCryptographyAlgorithmsVersion)</Version>
+    </PackageReference>
+    <PackageReference Include="System.Security.Cryptography.Primitives">
+      <Version>$(SystemSecurityCryptographyPrimitivesVersion)</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.Data.SqlClient.SNI">
-      <Version>1.1.0</Version>
+      <Version>$(MicrosoftDataSqlClientSniVersion)</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Identity.Client">
-      <Version>3.0.8</Version>
+      <Version>$(MicrosoftIdentityClientVersion)</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect">
-      <version>5.5.0</version>
+      <version>$(MicrosoftIdentityModelProtocolsOpenIdConnectVersion)</version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens">
+      <version>$(MicrosoftIdentityModelJsonWebTokensVersion)</version>
     </PackageReference>
     <PackageReference Include="System.Buffers">
-      <Version>4.5.0</Version>
+      <Version>$(SystemBuffersVersion)</Version>
     </PackageReference>
     <PackageReference Include="System.IO">
-      <Version>4.3.0</Version>
+      <Version>$(SystemIOVersion)</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
